@@ -12,8 +12,29 @@ Wrapped [HttpClient](https://learn.microsoft.com/en-us/dotnet/api/system.net.htt
 
 ## Quick Start Example
 ```cs
-private readonly string dataProviderId = config["providerid"];
-private readonly string dataProviderSecret= config["providersecret"];
+// In appSettings or similar add your Provider ID and Secret
+{
+    "OnboardingClientSettings:DataProviderId": "",
+    "OnboardingClientSettings:DataProviderSecret": ""
+}
+
+// add to Program.cs
+services.AddOptions<OnboardingClientSettings>().Configure<IConfiguration>((settings, configuration) =>
+    {
+        configuration.GetSection(nameof(OnboardingClientSettings)).Bind(settings);
+    })
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+services.AddSingleton(sp => sp.GetRequiredService<IOptions<OnboardingClientSettings>>().Value);
+
+services.AddHttpClient<IOnboardingServiceClient, OnboardingServiceClient>((httpClient, sp) =>
+    {
+        httpClient.BaseAddress = new Uri("https://ingest.occtoo.com");
+        return new OnboardingServiceClient(httpClient);
+    }).AddOcctooClientAuthentication();
+
+
 private readonly string dataSource = "MyFirstOcctoDataSource";
 
 static async Task Main(string[] args)
@@ -32,7 +53,7 @@ static async Task Main(string[] args)
         }
     };
 
-    var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
+    // DI IOnboardingServiceClient
     var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
     if(response.StatusCode == 202)
     {
@@ -43,5 +64,6 @@ static async Task Main(string[] args)
 
 [Code repository on github](https://github.com/Occtoo/Occtoo.Onboarding.Sdk)
 
-## Release Notes 2.0.2
-Bugfix for GetFileFromUniqueIdAsync to return 404 instead of 202 when no file found.
+## Release Notes 4.00
+* Support for .net 9 
+* Breaking changes: Dropped syncronous api calls

@@ -29,21 +29,6 @@ namespace Occtoo.Onboarding.Sdk.Models
         public override string ToString() => string.Format("Id: {0}", Id);
     }
 
-    public class TokenResponse
-    {
-        public TokenInfo result { get; set; }
-        public List<object> errors { get; set; }
-        public string requestId { get; set; }
-    }
-
-    public class TokenInfo
-    {
-        public string accessToken { get; set; }
-        public int expiresIn { get; set; }
-        public string tokenType { get; set; }
-        public object refreshToken { get; set; }
-        public string scope { get; set; }
-    }
 
     public class ApiResult<T>
     {
