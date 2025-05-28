@@ -1,8 +1,6 @@
-﻿using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Occtoo.Onboarding.Sdk.Models;
-using Polly;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,38 +9,31 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
+using CSharpFunctionalExtensions;
 
 namespace Occtoo.Onboarding.Sdk
 {
-    public class OnboardingServiceClient : IOnboardingServiceClient, IDisposable
+    public class OnboardingServiceClient : IOnboardingServiceClient
     {
-        private static readonly HttpClient httpClient = new HttpClient(new HttpRetryMessageHandler(new HttpClientHandler()))
-        {
-            BaseAddress = new Uri("https://ingest.occtoo.com")
-        };
         private readonly string cachekey = "token";
         private readonly string dataProviderId;
         private readonly string dataProviderSecret;
+        private readonly HttpClient httpClient;
         private readonly IMemoryCache cache;
 
-        public OnboardingServiceClient(string dataProviderId, string dataProviderSecret)
+        public OnboardingServiceClient(string dataProviderId, string dataProviderSecret, HttpClient httpClient)
         {
             this.dataProviderId = dataProviderId;
             this.dataProviderSecret = dataProviderSecret;
+            this.httpClient = httpClient;
             cache = new MemoryCache(new MemoryCacheOptions());
         }
 
-        public StartImportResponse StartEntityImport(string dataSource, IReadOnlyList<DynamicEntity> entities, string token = null, Guid? correlationId = null, CancellationToken? cancellationToken = null)
-        {
-            return StartEntityImportAsync(dataSource, entities, token, correlationId, cancellationToken).GetAwaiter().GetResult();
-        }
-
+      
         public async Task<StartImportResponse> StartEntityImportAsync(string dataSource, IReadOnlyList<DynamicEntity> entities, string token = null, Guid? correlationId = null, CancellationToken? cancellationToken = null)
         {
             var validEntities = ValidateParametes(dataSource, entities, cancellationToken);
@@ -56,10 +47,7 @@ namespace Occtoo.Onboarding.Sdk
             return response;
         }
 
-        public string GetToken(CancellationToken? cancellationToken = null)
-        {
-            return GetTokenAsync(cancellationToken).GetAwaiter().GetResult();
-        }
+      
 
         public async Task<string> GetTokenAsync(CancellationToken? cancellationToken = null)
         {
@@ -83,11 +71,7 @@ namespace Occtoo.Onboarding.Sdk
             return tokenDocument.result.accessToken;
         }
 
-        public ApiResult<MediaFileDto> GetFile(string fileId, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return GetFileAsync(fileId, token, cancellationToken).GetAwaiter().GetResult();
-        }
-
+       
         public async Task<ApiResult<MediaFileDto>> GetFileAsync(string fileId, string token = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken valueOrDefaultCancelToken = cancellationToken.GetValueOrDefault();
@@ -107,11 +91,7 @@ namespace Occtoo.Onboarding.Sdk
             return await GetApiResultFromResponse<MediaFileDto>(response);
         }
 
-        public ApiResult<MediaFileDto> GetFileFromUniqueId(string UniqueIdentifier, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return GetFileFromUniqueIdAsync(UniqueIdentifier, token, cancellationToken).GetAwaiter().GetResult();
-        }
-
+    
         public async Task<ApiResult<MediaFileDto>> GetFileFromUniqueIdAsync(string UniqueIdentifier, string token = null, CancellationToken? cancellationToken = null)
         {
             var mediaFileDto = new MediaFileDto();
@@ -144,10 +124,7 @@ namespace Occtoo.Onboarding.Sdk
             };
         }
 
-        public ApiResult<PartialSuccessResponse<string, MediaFileDto, Error>> GetFilesBatch(List<string> uniqueIdentifiers, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return GetFilesBatchAsync(uniqueIdentifiers, token, cancellationToken).GetAwaiter().GetResult();
-        }
+     
 
         public async Task<ApiResult<PartialSuccessResponse<string, MediaFileDto, Error>>> GetFilesBatchAsync(List<string> uniqueIdentifiers, string token = null, CancellationToken? cancellationToken = null)
         {
@@ -205,11 +182,6 @@ namespace Occtoo.Onboarding.Sdk
             return await GetApiResultFromResponse<PartialSuccessResponse<string, UploadDto, Error>>(response);
         }
 
-        public ApiResult<MediaFileDto> UploadFromLink(FileUploadFromLink link, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return UploadFromLinkAsync(link, token, cancellationToken).GetAwaiter().GetResult();
-        }
-
         /// <summary>
         /// Initiates asynchronous upload of a file using the URL to it. 
         /// Will skip file if UniqueIdentifier on the file already exists.
@@ -239,11 +211,6 @@ namespace Occtoo.Onboarding.Sdk
             return fileRequest;
         }
 
-        public ApiResult<UploadDto> GetUploadStatus(string uploadId, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return GetUploadStatusAsync(uploadId, token, cancellationToken).GetAwaiter().GetResult();
-        }
-
         /// <summary>
         /// Retrieves the upload information and state using the upload id
         /// </summary>
@@ -268,12 +235,6 @@ namespace Occtoo.Onboarding.Sdk
             var response = await httpClient.SendAsync(message, valueOrDefaultCancelToken);
             return await GetApiResultFromResponse<UploadDto>(response);
         }
-
-        public ApiResult DeleteFile(string fileId, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return DeleteFileAsync(fileId, token, cancellationToken).GetAwaiter().GetResult();
-        }
-
         public async Task<ApiResult> DeleteFileAsync(string fileId, string token = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken valueOrDefaultCancelToken = cancellationToken.GetValueOrDefault();
@@ -303,11 +264,6 @@ namespace Occtoo.Onboarding.Sdk
                 apiResult.StatusCode = (int)response.StatusCode;
                 return apiResult;
             }
-        }
-
-        public ApiResult<MediaFileDto> UploadFile(Stream content, UploadMetadata metadata, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return UploadFileAsync(content, metadata, token, cancellationToken).GetAwaiter().GetResult();
         }
 
         public async Task<ApiResult<MediaFileDto>> UploadFileAsync(Stream content, UploadMetadata metadata, string token = null, CancellationToken? cancellationToken = null)
@@ -343,11 +299,6 @@ namespace Occtoo.Onboarding.Sdk
             }
 
             return await GetFileAsync(fileId.Value, token, cancellationToken);
-        }
-
-        public ApiResult<MediaFileDto> UploadFileIfNotExist(Stream content, UploadMetadata metadata, string token = null, CancellationToken? cancellationToken = null)
-        {
-            return UploadFileIfNotExistAsync(content, metadata, token, cancellationToken).GetAwaiter().GetResult();
         }
 
         public async Task<ApiResult<MediaFileDto>> UploadFileIfNotExistAsync(Stream content, UploadMetadata metadata, string token = null, CancellationToken? cancellationToken = null)
@@ -389,7 +340,7 @@ namespace Occtoo.Onboarding.Sdk
             return apiResult;
         }
 
-        private static async Task<StartImportResponse> EntityImportAsync(string dataSource, IEnumerable<DynamicEntity> validEntities, string token, CancellationToken cancellationToken, Guid? correlationId = null)
+        private async Task<StartImportResponse> EntityImportAsync(string dataSource, IEnumerable<DynamicEntity> validEntities, string token, CancellationToken cancellationToken, Guid? correlationId = null)
         {
             string requestUri = $"import/{dataSource}";
             if (correlationId.HasValue && correlationId != default(Guid))
@@ -403,7 +354,8 @@ namespace Occtoo.Onboarding.Sdk
             {
                 Entities = validEntities
             }), Encoding.UTF8, "application/json");
-            var ingestResponse = await httpClient.SendAsync(ingestRequest, cancellationToken);
+
+			var ingestResponse = await httpClient.SendAsync(ingestRequest, cancellationToken);
             if (!ingestResponse.IsSuccessStatusCode)
             {
                 switch (ingestResponse.StatusCode)
@@ -496,14 +448,32 @@ namespace Occtoo.Onboarding.Sdk
             {
                 foreach (var property in entity.Properties)
                 {
+	                if (property is null)
+	                {
+                        throw new ArgumentException($"Entity {entity.Key} contains a null property.");
+					}
                     if (!InvalidCharacters.IsMatch(property.Id))
                     {
                         throw new ArgumentException($"{property.Id} - Entities must have Property identifiers containing only letters, digits, underscores, or hyphens and is at most 256 characters long .");
                     }
-                    if (!InvalidCharactersLang.IsMatch(property.Language))
+
+                    try
                     {
-                        throw new ArgumentException($"{property.Language} - Entities must have Property Language containing only letters, digits, underscores, or hyphens and is at most 10 characters long .");
+	                    if (property.Language is null)
+	                    {
+                            continue;
+	                    }
+						if (!InvalidCharactersLang.IsMatch(property.Language))
+	                    {
+		                    throw new ArgumentException($"{property.Language} - Entities must have Property Language containing only letters, digits, underscores, or hyphens and is at most 10 characters long .");
+	                    }
+					}
+                    catch (Exception e)
+                    {
+
+	                    var test = e.Message;
                     }
+                    
                 }
             }
 
@@ -618,6 +588,5 @@ namespace Occtoo.Onboarding.Sdk
         }
         #endregion
 
-        public void Dispose() => httpClient?.Dispose();
     }
 }
