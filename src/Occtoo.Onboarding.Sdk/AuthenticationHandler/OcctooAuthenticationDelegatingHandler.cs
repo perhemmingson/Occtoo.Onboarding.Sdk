@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Occtoo.Onboarding.Sdk.Configuration;
+﻿using Occtoo.Onboarding.Sdk.Configuration;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -9,16 +8,18 @@ using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Occtoo.Onboarding.Sdk.AuthenticationHandler;
 
-public sealed class AuthenticationDelegatingHandler(AccessTokensCacheManager accessTokensCacheManager, OnboardingClientSettings applicationSettings) : DelegatingHandler
+public sealed class OcctooAuthenticationDelegatingHandler(AccessTokensCacheManager accessTokensCacheManager, OnboardingClientSettings applicationSettings) : DelegatingHandler
 {
 	private const string AuthorizationHeader = "Authorization";
 	private const string Bearer = "Bearer";
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var token = await GetToken(cancellationToken);
 
 		request.Headers.Authorization = new AuthenticationHeaderValue(Bearer, token.AccessToken);
@@ -53,8 +54,9 @@ public sealed class AuthenticationDelegatingHandler(AccessTokensCacheManager acc
 		return token;
 	}
 
-	public async Task<TokenInfo> GetOcctooTokenAsync(CancellationToken cancellationToken = default)
+	public async Task<TokenInfo> GetOcctooTokenAsync(CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var url = new Uri("https://ingest.occtoo.com/dataProviders/tokens");
 		var tokenRequest = new HttpRequestMessage(HttpMethod.Post, url)
 		{
