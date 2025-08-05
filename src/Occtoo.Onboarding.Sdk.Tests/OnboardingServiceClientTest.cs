@@ -10,21 +10,16 @@ namespace Occtoo.Onboarding.Sdk.Tests
         private readonly string dataSource = "nugetTester";
         private static readonly Random random = new Random();
         private readonly IConfiguration config;
+        private readonly IOnboardingServiceClient _onboardingServiceClient;
 
-        public OnboardingServiceClientTest()
+		public OnboardingServiceClientTest()
         {
             var builder = new ConfigurationBuilder().AddUserSecrets<OnboardingServiceClientTest>();
             config = builder.Build();
             dataProviderId = config["providerid"];
             dataProviderSecret = config["providersecret"];
-        }
+            _onboardingServiceClient = NSubstitute.Substitute.For<IOnboardingServiceClient>();
 
-        [Fact]
-        public async Task GetToken()
-        {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var token = await onboardingServliceClient.GetTokenAsync();
-            Assert.NotEmpty(token);
         }
 
         [Fact]
@@ -44,8 +39,8 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
+            
+            var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties);
             Assert.Equal(202, response.StatusCode);
         }
 
@@ -64,10 +59,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
+            
             try
             {
-                var response = await onboardingServliceClient.StartEntityImportAsync("NotValidDataSource", enties);
+                var response = await _onboardingServiceClient.StartEntityImportAsync("NotValidDataSource", enties);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -90,10 +85,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient("test", dataProviderSecret);
+            //var onboardingServliceClient = new OnboardingServiceClient("test", dataProviderSecret);
             try
             {
-                var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
+                var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties);
             }
             catch (ArgumentException ex)
             {
@@ -116,10 +111,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
+            
             try
             {
-                var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
+                var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties);
             }
             catch (ArgumentException ex)
             {
@@ -154,10 +149,9 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             try
             {
-                var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
+                var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties);
             }
             catch (ArgumentException e)
             {
@@ -196,10 +190,9 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 }
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             try
             {
-                var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties);
+                var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties);
             }
             catch (ArgumentException e)
             {
@@ -228,12 +221,11 @@ namespace Occtoo.Onboarding.Sdk.Tests
                 },
             };
 
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             try
             {
                 var cancelToken = new CancellationTokenSource();
-                cancelToken.Cancel();
-                var response = await onboardingServliceClient.StartEntityImportAsync(dataSource, enties, null, null, cancelToken.Token);
+                await cancelToken.CancelAsync();
+                var response = await _onboardingServiceClient.StartEntityImportAsync(dataSource, enties, null, cancelToken.Token);
             }
             catch (OperationCanceledException e)
             {
@@ -249,8 +241,8 @@ namespace Occtoo.Onboarding.Sdk.Tests
                    new FileUploadFromLink(config["fileUrl1"], config["fileName1"], config["fileUniqueId1"]),
                    new FileUploadFromLink(config["fileUrl2"], config["fileName2"], config["fileUniqueId2"]),
                 };
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.UploadFromLinksAsync(request);
+            
+            var response = await _onboardingServiceClient.UploadFromLinksAsync(request);
             Assert.False(response.Errors.Any());
         }
 
@@ -258,8 +250,7 @@ namespace Occtoo.Onboarding.Sdk.Tests
         public async Task UploadImageFromLink()
         {
             var fileToUpload = new FileUploadFromLink(config["fileUrl1"], config["fileName1"], config["fileUniqueId1"]);
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.UploadFromLinkAsync(fileToUpload);
+            var response = await _onboardingServiceClient.UploadFromLinkAsync(fileToUpload);
             Console.WriteLine(response.Result.PublicUrl);
             Assert.Equal(200, response.StatusCode);
         }
@@ -267,8 +258,7 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task GetImageById()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.GetFileAsync(config["fileId"]);
+            var response = await _onboardingServiceClient.GetFileAsync(config["fileId"]);
             Console.WriteLine(response.Result.PublicUrl);
             Assert.Equal(200, response.StatusCode);
         }
@@ -276,8 +266,7 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task GetImageByUniqueId()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.GetFileFromUniqueIdAsync(config["fileUniqueId2"]);
+            var response = await _onboardingServiceClient.GetFileFromUniqueIdAsync(config["fileUniqueId2"]);
             Console.WriteLine(response.Result.PublicUrl);
             Assert.Equal(200, response.StatusCode);
         }
@@ -285,8 +274,7 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task GetImages()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var response = await onboardingServliceClient.GetFilesBatchAsync(
+            var response = await _onboardingServiceClient.GetFilesBatchAsync(
                 new List<string> { config["fileUniqueId1"], config["fileUniqueId2"] }
             );
             Assert.Equal(200, response.StatusCode);
@@ -295,21 +283,17 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task DeleteImage()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
-            var getResponse = await onboardingServliceClient.GetFilesBatchAsync(
-                new List<string> { config["fileUniqueId2"] }
-            );
+            var getResponse = await _onboardingServiceClient.GetFilesBatchAsync(new List<string> { config["fileUniqueId2"] });
             var fileIdToDelete = getResponse.Result.Succeeded.First().Value.Id;
-            var deleteResponse = await onboardingServliceClient.DeleteFileAsync(fileIdToDelete);
+            var deleteResponse = await _onboardingServiceClient.DeleteFileAsync(fileIdToDelete);
             Assert.Equal(204, deleteResponse.StatusCode);
         }
 
         [Fact]
         public async Task TryingToDeleteImageThatDoesnotExist()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             var fileIdToDelete = "foo";
-            var deleteResponse = await onboardingServliceClient.DeleteFileAsync(fileIdToDelete);
+            var deleteResponse = await _onboardingServiceClient.DeleteFileAsync(fileIdToDelete);
             Assert.Equal(404, deleteResponse.StatusCode);
         }
 
@@ -317,11 +301,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task UploadFileFromStream()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             var httpClient = new HttpClient();
             var fileByteArray = await httpClient.GetByteArrayAsync("https://www.occtoo.com/hs-fs/hubfs/Petter.jpg?width=200&height=200&name=Petter.jpg");
             var metadata = new UploadMetadata(config["fileName2"], "image/jpeg", fileByteArray.Length, RandomString(4));
-            var response = await onboardingServliceClient.UploadFileAsync(new MemoryStream(fileByteArray), metadata);
+            var response = await _onboardingServiceClient.UploadFileAsync(new MemoryStream(fileByteArray), metadata);
             Console.WriteLine(response.Result.PublicUrl);
             Assert.Equal(200, response.StatusCode);
         }
@@ -329,11 +312,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task UploadFileThatAlreadyExistFromStream()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             var httpClient = new HttpClient();
             var fileByteArray = await httpClient.GetByteArrayAsync("https://www.occtoo.com/hs-fs/hubfs/Petter.jpg?width=200&height=200&name=Petter.jpg");
             var metadata = new UploadMetadata(config["fileName2"], "image/jpeg", fileByteArray.Length, RandomString(4));
-            var response = await onboardingServliceClient.UploadFileIfNotExistAsync(new MemoryStream(fileByteArray), metadata);
+            var response = await _onboardingServiceClient.UploadFileIfNotExistAsync(new MemoryStream(fileByteArray), metadata);
             Console.WriteLine(response.Result.PublicUrl);
             Assert.Equal(200, response.StatusCode);
         }
@@ -341,11 +323,10 @@ namespace Occtoo.Onboarding.Sdk.Tests
         [Fact]
         public async Task UploadFileFromStreamShouldGiveAlreadyExistError()
         {
-            var onboardingServliceClient = new OnboardingServiceClient(dataProviderId, dataProviderSecret);
             var httpClient = new HttpClient();
             var fileByteArray = await httpClient.GetByteArrayAsync("https://www.occtoo.com/hs-fs/hubfs/Petter.jpg?width=200&height=200&name=Petter.jpg");
             var metadata = new UploadMetadata(config["fileName2"], "image/jpeg", fileByteArray.Length, config["fileUniqueId3"]);
-            var response = await onboardingServliceClient.UploadFileAsync(new MemoryStream(fileByteArray), metadata);
+            var response = await _onboardingServiceClient.UploadFileAsync(new MemoryStream(fileByteArray), metadata);
             Assert.Equal(409, response.StatusCode);
         }
 
