@@ -500,7 +500,7 @@ namespace Occtoo.Onboarding.Sdk
                     {
                         throw new ArgumentException($"{property.Id} - Entities must have Property identifiers containing only letters, digits, underscores, or hyphens and is at most 256 characters long .");
                     }
-                    if (!InvalidCharactersLang.IsMatch(property.Language))
+                    if (!string.IsNullOrEmpty(property.Language) && !InvalidCharactersLang.IsMatch(property.Language))
                     {
                         throw new ArgumentException($"{property.Language} - Entities must have Property Language containing only letters, digits, underscores, or hyphens and is at most 10 characters long .");
                     }
